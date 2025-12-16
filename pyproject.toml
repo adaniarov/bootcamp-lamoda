@@ -1,0 +1,38 @@
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "lamoda_bootcamp"
+version = "0.0.1"
+description = "A short description of the project."
+authors = [
+  { name = "Your name (or your organization/company/team)" },
+]
+
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    
+]
+dependencies = [
+    "pip",
+    "python-dotenv",
+    "ruff",
+    "ipykernel (>=7.1.0,<8.0.0)",
+]
+requires-python = "~=3.10.0"
+
+
+[tool.ruff]
+line-length = 99
+src = ["lamoda_bootcamp"]
+include = ["pyproject.toml", "lamoda_bootcamp/**/*.py"]
+
+[tool.ruff.lint]
+extend-select = ["I"]  # Add import sorting
+
+[tool.ruff.lint.isort]
+known-first-party = ["lamoda_bootcamp"]
+force-sort-within-sections = true
+
