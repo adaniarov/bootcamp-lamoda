@@ -2,6 +2,9 @@
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry]
+package-mode = false
+
 [project]
 name = "lamoda_bootcamp"
 version = "0.0.1"
@@ -20,6 +23,17 @@ dependencies = [
     "python-dotenv",
     "ruff",
     "ipykernel (>=7.1.0,<8.0.0)",
+    "pandas (>=2.3.3,<3.0.0)",
+    "hdbscan (>=0.8.41,<0.9.0)",
+    "sentence-transformers (>=5.2.0,<6.0.0)",
+    "transformers (>=4.57.3,<5.0.0)",
+    "pymorphy2 (>=0.9.1,<0.10.0)",
+    "scikit-learn (>=1.0.0,<2.0.0)",
+    "setuptools",
+    "matplotlib (>=3.10.8,<4.0.0)",
+    "seaborn (>=0.13.2,<0.14.0)",
+    "torch (>=2.9.1,<3.0.0) ; sys_platform == \"macosx_11_0_arm64\"",
+    "openai (>=1.0.0,<2.0.0)",
 ]
 requires-python = "~=3.10.0"
 
