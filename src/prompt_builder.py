@@ -51,7 +51,7 @@ def build_prompt(
     product_info = "\n".join(product_info_parts) if product_info_parts else "Информация о продукте не указана"
 
     # Формируем список отзывов
-    reviews_text = "\n".join([f"{i+1}. {review}" for i, review in enumerate(reviews, 1)])
+    reviews_text = "\n".join([f"{i}. {review}" for i, review in enumerate(reviews, 1)])
 
     # Формируем список GOLDEN TAGS
     tags_text = ", ".join(golden_tags)
