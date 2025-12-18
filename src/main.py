@@ -1,9 +1,11 @@
 """Главный модуль для запуска демонстрации."""
 
+import json
 from pathlib import Path
+from typing import Dict, List, Optional
 
-from .inference import run_inference
 from .openai_client import OpenAILLMClient
+from .pipeline import run_pipeline_for_file
 
 
 def main(
@@ -54,30 +56,68 @@ def main(
     llm_client = OpenAILLMClient(model=model)
     print("✓ Клиент инициализирован")
 
-    # Запускаем инференс
-    print(f"\nЗапуск инференса для {limit} товаров...")
-    results = run_inference(
-        csv_path=csv_path,
+    # Загружаем golden_tags из JSON файла, если указан
+    name_to_tags: Optional[Dict[str, List[str]]] = None
+    subtype_to_tags: Optional[Dict[str, List[str]]] = None
+    type_to_tags: Optional[Dict[str, List[str]]] = None
+
+    if golden_tags_path:
+        print(f"\nЗагрузка GOLDEN_TAGS из {golden_tags_path}...")
+        try:
+            with open(golden_tags_path, "r", encoding="utf-8") as f:
+                golden_tags_data = json.load(f)
+
+            # Преобразуем JSON в нужный формат
+            name_to_tags = {}
+            for item in golden_tags_data:
+                if "name" in item and "tags" in item:
+                    name = item["name"]
+                    tags = item["tags"]
+                    # Если tags - список, используем как есть, иначе преобразуем
+                    if isinstance(tags, list):
+                        name_to_tags[name] = tags
+                    elif isinstance(tags, str):
+                        # Если строка, разбиваем по запятым
+                        name_to_tags[name] = [t.strip() for t in tags.split(",") if t.strip()]
+
+            print(f"✓ Загружено {len(name_to_tags)} записей golden_tags")
+        except Exception as e:
+            print(f"⚠ Ошибка при загрузке golden_tags: {e}")
+            print("Продолжаем без golden_tags")
+
+    # Запускаем pipeline
+    print(f"\nЗапуск pipeline для обработки товаров...")
+    results_df = run_pipeline_for_file(
+        csv_path=str(csv_path),
         llm_client=llm_client,
-        golden_tags_path=golden_tags_path,
+        name_to_tags=name_to_tags,
+        subtype_to_tags=subtype_to_tags,
+        type_to_tags=type_to_tags,
         max_chars=max_chars,
         max_reviews=max_reviews,
-        min_length=min_length,
-        limit=limit,
+        min_review_length=min_length,
+        limit_skus=limit,
     )
 
     # Выводим результаты
     print("\n" + "=" * 80)
     print("РЕЗУЛЬТАТЫ:")
     print("=" * 80)
-    for i, result in enumerate(results, 1):
-        print(f"{i}. {result}")
+    for i, row in results_df.iterrows():
+        print(f"{i+1}. SKU: {row['sku']}")
+        print(f"   Название: {row['name']}")
+        print(f"   Теги ({row['num_tags']}): {row['tags'] if row['tags'] else 'нет тегов'}")
+        if row.get('error'):
+            print(f"   ⚠ Ошибка: {row['error']}")
+        print()
 
-    print("\n" + "=" * 80)
-    print(f"Обработано товаров: {len(results)}")
+    print("=" * 80)
+    print(f"Обработано товаров: {len(results_df)}")
+    print(f"С тегами: {len(results_df[results_df['num_tags'] > 0])}")
+    print(f"Без тегов: {len(results_df[results_df['num_tags'] == 0])}")
     print("=" * 80)
 
-    return results
+    return results_df
 
 
 if __name__ == "__main__":
