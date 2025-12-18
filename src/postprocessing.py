@@ -1,5 +1,6 @@
 """Модуль для постобработки тегов, полученных от LLM."""
 
+import json
 import re
 from typing import List, Set
 
@@ -42,9 +43,33 @@ def postprocess_tags(
     # Нормализуем список GOLDEN TAGS (приводим к нижнему регистру для сравнения)
     golden_tags_lower = {tag.lower().strip(): tag for tag in golden_tags}
 
-    # Извлекаем теги из ответа LLM
-    # Разделяем по запятым, точкам с запятой, переносам строк
-    raw_tags = re.split(r'[,;\n]', llm_response)
+    # Пробуем извлечь теги из JSON формата
+    raw_tags: List[str] = []
+    
+    # Пытаемся найти и распарсить JSON объект с top_tags
+    try:
+        # Ищем JSON объект в ответе
+        json_match = re.search(r'\{[^{}]*"top_tags"[^{}]*\}', llm_response, re.DOTALL | re.IGNORECASE)
+        if json_match:
+            json_str = json_match.group(0)
+            parsed_json = json.loads(json_str)
+            if "top_tags" in parsed_json and isinstance(parsed_json["top_tags"], list):
+                raw_tags = [str(tag).strip() for tag in parsed_json["top_tags"] if tag]
+    except (json.JSONDecodeError, KeyError, AttributeError):
+        # Если не удалось распарсить JSON, пробуем извлечь теги из массива вручную
+        try:
+            # Ищем массив тегов в формате ["тег1", "тег2", ...]
+            array_match = re.search(r'\[([^\]]+)\]', llm_response)
+            if array_match:
+                tags_content = array_match.group(1)
+                raw_tags = re.findall(r'"([^"]+)"', tags_content)
+        except Exception:
+            pass
+    
+    # Если JSON не найден, пробуем старый формат (разделение по запятым)
+    if not raw_tags:
+        # Разделяем по запятым, точкам с запятой, переносам строк
+        raw_tags = re.split(r'[,;\n]', llm_response)
 
     # Очищаем и нормализуем теги
     processed_tags: List[str] = []

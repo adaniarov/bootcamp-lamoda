@@ -39,49 +39,63 @@ def build_prompt(
     if not golden_tags:
         raise ValueError("Список GOLDEN TAGS не может быть пустым")
 
-    # Формируем информацию о продукте
-    product_info_parts = []
-    if product_name:
-        product_info_parts.append(f"Название продукта: {product_name}")
-    if product_subtype:
-        product_info_parts.append(f"Подтип: {product_subtype}")
-    if product_type:
-        product_info_parts.append(f"Тип: {product_type}")
+    # Формируем список отзывов (каждый отзыв на новой строке)
+    reviews_text = "\n".join(reviews) if isinstance(reviews, list) else str(reviews)
 
-    product_info = "\n".join(product_info_parts) if product_info_parts else "Информация о продукте не указана"
+    # Формируем список тегов (через запятую)
+    tags_text = ", ".join(golden_tags) if isinstance(golden_tags, list) else str(golden_tags)
 
-    # Формируем список отзывов
-    reviews_text = "\n".join([f"{i}. {review}" for i, review in enumerate(reviews, 1)])
-
-    # Формируем список GOLDEN TAGS
-    tags_text = ", ".join(golden_tags)
+    # Подготавливаем значения для подстановки (защита от None)
+    product_type_str = product_type or ""
+    product_subtype_str = product_subtype or ""
+    product_name_str = product_name or ""
 
     # Используем кастомный шаблон или стандартный
     if custom_prompt_template:
         prompt = custom_prompt_template.format(
-            product_info=product_info,
+            product_type=product_type_str,
+            product_subtype=product_subtype_str,
+            product_name=product_name_str,
             reviews=reviews_text,
-            golden_tags=tags_text,
+            tags=tags_text,
         )
     else:
-        prompt = f"""Проанализируй отзывы о продукте и выбери только релевантные теги из списка GOLDEN TAGS.
+        prompt = f'''Ты — эксперт по анализу товаров для интернет-магазина Lamoda. Твоя задача — проанализировать информацию о товаре и выбрать ТОЧНО 6 самых релевантных тегов из предоставленного списка тегов.
 
-{product_info}
+ИНСТРУКЦИИ:
+1. Ты ПОЛУЧАЕШЬ информацию о товаре и должен выбрать ровно 6 тегов из заданного списка.
+2. КРИТЕРИИ ВЫБОРА:
+   - Анализируй название товара, категорию и подкатегорию.
+   - Внимательно изучи отзывы покупателей — они содержат ключевую информацию о реальных характеристиках товара.
+   - Выбирай теги, которые наиболее часто упоминаются или подразумеваются в отзывах.
+   - Учитывай практическое использование товара (сезонность, комфорт, особенности).
+   - Приоритет отдается тегам, которые отражают ключевые преимущества товара по мнению покупателей.
 
-Отзывы о продукте:
-{reviews_text}
+3. СТРОГИЕ ПРАВИЛА:
+   - Выбирай ТОЛЬКО из предоставленного списка тегов — никаких своих тегов!
+   - ДОЛЖНО БЫТЬ ТОЧНО 6 тегов, не больше и не меньше.
+   - Если в списке тегов меньше 6 вариантов — выбирай все доступные.
+   - Не добавляй никаких пояснений, комментариев или дополнительного текста.
+   - Вывод должен быть 100% валидным JSON.
 
-Доступные GOLDEN TAGS (выбери только релевантные):
-{tags_text}
+4. ФОРМАТ ВЫВОДА (СТРОГО СЛЕДУЙ):
+{{
+  "top_tags": ["тег1", "тег2", "тег3", "тег4", "тег5", "тег6"]
+}}
 
-Инструкция:
-1. Проанализируй каждый отзыв
-2. Выбери только те теги из списка GOLDEN TAGS, которые действительно упоминаются или подразумеваются в отзывах
-3. Верни только список выбранных тегов, разделенных запятыми
-4. Если ни один тег не релевантен, верни пустую строку
-5. Не добавляй теги, которых нет в списке GOLDEN TAGS
+ВАЖНО для gpt-4o-mini:
+- Следуй инструкциям точно — модель имеет ограниченные возможности.
+- Не отклоняйся от формата вывода.
+- Убедись, что все выбранные теги присутствуют в списке "tags".
+- Проверь синтаксическую корректность JSON (кавычки, запятые, скобки).
 
-Выбранные теги:"""
+ВХОДНЫЕ ДАННЫЕ:
+<product_type>{product_type_str}</product_type>
+<product_subtype>{product_subtype_str}</product_subtype>
+<product_name>{product_name_str}</product_name>
+<reviews>{reviews_text}</reviews>
+<tags>{tags_text}</tags>
+'''
 
     return prompt
 
