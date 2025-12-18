@@ -1,56 +1,70 @@
-"""Модуль для вызова LLM."""
+"""Модуль для вызова LLM для одного товара."""
 
-from typing import Optional
+from typing import Dict, List, Optional
 
-from src.llm_client import LLMClient
+from .llm_client import BaseLLMClient
+from .preprocessing import prepare_reviews
+from .prompt_builder import build_prompt, get_golden_tags_for_product
 
 
 def run_llm(
-    prompt: str,
-    llm_client: LLMClient,
-    max_retries: int = 3,
+    sku: str,
+    product_name: str,
+    reviews: List[str],
+    llm_client: BaseLLMClient,
+    golden_tags: Optional[Dict[str, str]] = None,
+    max_chars: int = 500,
+    max_reviews: int = 10,
+    min_length: int = 10,
 ) -> str:
     """
-    Вызывает LLM с заданным промптом.
+    Вызывает LLM для одного товара.
 
     Args:
-        prompt: Промпт для LLM.
-        llm_client: Клиент для работы с LLM (должен иметь метод generate).
-        max_retries: Максимальное количество попыток при ошибке. По умолчанию 3.
+        sku: SKU товара
+        product_name: Название товара
+        reviews: Список отзывов о товаре
+        llm_client: Клиент для работы с LLM
+        golden_tags: Словарь {name: golden_tag} (опционально)
+        max_chars: Максимальная длина отзыва в символах
+        max_reviews: Максимальное количество отзывов
+        min_length: Минимальная длина отзыва
 
     Returns:
-        Ответ от LLM в виде строки.
-
-    Raises:
-        ValueError: Если prompt пустой.
-        Exception: Если все попытки вызова LLM завершились ошибкой.
-
-    Examples:
-        >>> class MockLLMClient:
-        ...     def generate(self, prompt: str) -> str:
-        ...         return "тег1, тег2"
-        >>> client = MockLLMClient()
-        >>> result = run_llm("Выбери теги", client)
-        >>> "тег" in result.lower()
-        True
+        Результат в формате: sku-name-tags
     """
-    if not prompt or not prompt.strip():
-        raise ValueError("Промпт не может быть пустым")
+    # Предобрабатываем отзывы
+    processed_reviews = prepare_reviews(
+        reviews=reviews,
+        max_chars=max_chars,
+        max_reviews=max_reviews,
+        min_length=min_length,
+    )
 
-    last_error = None
-    for attempt in range(max_retries):
-        try:
-            response = llm_client.generate(prompt)
-            return response.strip()
-        except Exception as e:
-            last_error = e
-            if attempt < max_retries - 1:
-                continue
-            else:
-                raise Exception(
-                    f"Не удалось получить ответ от LLM после {max_retries} попыток"
-                ) from last_error
+    if not processed_reviews:
+        return f"{sku}-{product_name}-no_reviews"
 
-    # Этот код не должен выполняться, но для типизации
-    raise Exception("Неожиданная ошибка при вызове LLM") from last_error
+    # Получаем golden_tag для товара
+    golden_tag = None
+    if golden_tags:
+        golden_tag = get_golden_tags_for_product(product_name, golden_tags)
+
+    # Строим промпт
+    prompt = build_prompt(
+        product_name=product_name,
+        reviews=processed_reviews,
+        golden_tag=golden_tag,
+    )
+
+    # Вызываем LLM
+    response = llm_client.generate(prompt)
+
+    # Формируем результат в формате sku-name-tags
+    # Если ответ уже в нужном формате, используем его, иначе формируем сами
+    if response.strip().startswith(f"{sku}-"):
+        return response.strip()
+    else:
+        # Извлекаем теги из ответа или используем весь ответ как теги
+        tags = response.strip()
+        return f"{sku}-{product_name}-{tags}"
 
