@@ -1,10 +1,30 @@
-"""Базовый интерфейс для LLM клиентов."""
+"""Абстракция для работы с LLM клиентом."""
 
 from abc import ABC, abstractmethod
+from typing import Protocol
+
+
+class LLMClient(Protocol):
+    """Протокол для LLM клиента."""
+
+    def generate(self, prompt: str) -> str:
+        """
+        Генерирует ответ на основе промпта.
+
+        Args:
+            prompt: Текст промпта для LLM.
+
+        Returns:
+            Ответ от LLM в виде строки.
+
+        Raises:
+            Exception: При ошибке обращения к LLM.
+        """
+        ...
 
 
 class BaseLLMClient(ABC):
-    """Базовый класс для LLM клиентов."""
+    """Базовый абстрактный класс для LLM клиента."""
 
     @abstractmethod
     def generate(self, prompt: str) -> str:
@@ -12,25 +32,13 @@ class BaseLLMClient(ABC):
         Генерирует ответ на основе промпта.
 
         Args:
-            prompt: Текст промпта
+            prompt: Текст промпта для LLM.
 
         Returns:
-            Ответ от LLM
+            Ответ от LLM в виде строки.
+
+        Raises:
+            Exception: При ошибке обращения к LLM.
         """
         pass
-
-
-class LLMClient(BaseLLMClient):
-    """Обертка для совместимости с существующим кодом."""
-
-    def __init__(self, client: BaseLLMClient):
-        """
-        Args:
-            client: Реализация BaseLLMClient
-        """
-        self._client = client
-
-    def generate(self, prompt: str) -> str:
-        """Генерирует ответ на основе промпта."""
-        return self._client.generate(prompt)
 
