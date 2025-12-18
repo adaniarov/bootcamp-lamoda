@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from src.llm_client import LLMClient
+from .llm_client import LLMClient
 
 
 def run_llm(
