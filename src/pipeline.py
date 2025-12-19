@@ -18,7 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def run_pipeline_for_file(
+def run_llm_pipeline_for_file(
     csv_path: str,
     llm_client: LLMClient,
     name_to_tags: Optional[Dict[str, List[str]]] = None,
